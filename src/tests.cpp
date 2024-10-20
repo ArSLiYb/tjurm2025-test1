@@ -1,12 +1,19 @@
 #include "tests.h"
-
+#include <cstddef>
+#include<algorithm>
 // 练习1，实现库函数strlen
 int my_strlen(char *str) {
     /**
      * 统计字符串的长度，太简单了。
      */
-
     // IMPLEMENT YOUR CODE HERE
+    char *p=str;
+    int ans=0;
+    while(*p!='\0'){
+        ans++;
+        p++;
+    }
+    return ans;
     return 0;
 }
 
@@ -17,8 +24,19 @@ void my_strcat(char *str_1, char *str_2) {
      * 将字符串str_2拼接到str_1之后，我们保证str_1指向的内存空间足够用于添加str_2。
      * 注意结束符'\0'的处理。
      */
-
     // IMPLEMENT YOUR CODE HERE
+    char *p=str_1;
+    char *q=str_2;
+    while(*p!='\0'){
+        p++;
+    }
+    while(*q!='\0'){
+        *p=*q;
+        p++;
+        q++;
+    }
+    p++;
+    *p='\0';
 }
 
 
@@ -29,8 +47,21 @@ char* my_strstr(char *s, char *p) {
      * 例如：
      * s = "123456", p = "34"，应该返回指向字符'3'的指针。
      */
-
     // IMPLEMENT YOUR CODE HERE
+    char *m=s,*n=p,*t;
+    while(*m!='\0'){
+        n=p;
+        t=m;
+        while(*m==*n&&*m!='\0'&&*n!='\0'){
+            m++;
+            n++;
+        }
+        if(*n=='\0'){
+            return t;
+        }
+        m=t;
+        m++;
+    }
     return 0;
 }
 
@@ -94,9 +125,19 @@ void rgb2gray(float *in, float *out, int h, int w) {
      * (1) for循环的使用。
      * (2) 内存的访问。
      */
-
     // IMPLEMENT YOUR CODE HERE
     // ...
+    float *p=out;
+    float r,g,b;
+    for(int i=0;i<=h-1;i++)
+    {
+        for(int j=0;j<=w-1;j++){
+            r=*(in+(w*i+j)*3);
+            g=*(in+(w*i+j)*3+1);
+            b=*(in+(w*i+j)*3+2);
+            *(out+w*i+j)=0.1140 * b  + 0.5870 * g + 0.2989 * r;
+        }
+    }
 }
 
 // 练习5，实现图像处理算法 resize：缩小或放大图像
@@ -118,7 +159,7 @@ void resize(float *in, float *out, int h, int w, int c, float scale) {
      *
      *      则满足下面的条件：
      *                    x2 - x          x - x1
-     *          v = v1 * ———————— + v2 * ————————
+     *          v = v2 * ———————— + v1 * ————————
      *                    x2 - x1         x2 - x1
      *      也就是说，v的值是 点1 和 点2 的值的加权平均值，权重与到两点的距离相关
      *      (公式中的 x也可以是 y，因为是在一条直线上)。
@@ -195,11 +236,40 @@ void resize(float *in, float *out, int h, int w, int c, float scale) {
      *     3. 注意上面的方法中，四个邻居点的坐标可能会超出 src 的范围，
      *        所以需要对其进行边界检查
      */
-
-    int new_h = h * scale, new_w = w * scale;
     // IMPLEMENT YOUR CODE HERE
-
+    int new_h = static_cast<int>(h*scale),new_w = static_cast<int>(w*scale);
+    float *t;
+    float *GrayPicture= new float [h*w];
+    if(c==3){
+        rgb2gray(in,GrayPicture,h,w);
+        t=GrayPicture;
+    }
+    else{
+        t=in;
+    }
+    for(int i=0;i<=new_h-1;i++){
+        for(int j=0;j<=new_w-1;j++){
+            float x=j/scale,y=i/scale;
+            int x1=static_cast<int>(x),y1=static_cast<int>(y);
+            int x2=std::min(x1+1,w-1);
+            int y2=y1;
+            int x3=x1;
+            int dx = x - x1, dy = y - y1;
+            int y3=std::min(y1+1,h-1);
+            int x4=x2,y4=y3;
+            float *P1 = t+y1*w+x1;
+            float *P2 = t+y2*w+x2;
+            float *P3 = t+y3*w+x3;
+            float *P4 = t+y4*w+x4;
+            float Q = *P1*(1 - dx)*(1 - dy) +*P2*dx*(1 - dy)*+*P3*(1 - dx)*dy +*P4*dx*dy;
+            *(out+new_w*i+j)=Q;
+        }
+    }
+    if(c==3){
+        delete[] GrayPicture;
+    }
 }
+
 
 
 // 练习6，实现图像处理算法：直方图均衡化
@@ -221,4 +291,26 @@ void hist_eq(float *in, int h, int w) {
      */
 
     // IMPLEMENT YOUR CODE HERE
+    int histogram[256] = {0};
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            int pixelValue = static_cast<int>(*(in+i*w+j));
+            histogram[pixelValue]++;
+        }
+    }
+    float cdf[256] = {0.0f};
+    float cdfSum = 0.0f;
+    for (int i = 0; i < 256; ++i) {
+        cdfSum += histogram[i];
+        cdf[i] = cdfSum / (h * w);
+    }
+
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            int pixelValue = static_cast<int>(*(in+i*w+j));
+            float newPixelValue = cdf[pixelValue] * 255.0f;
+            int ans = std::min(std::max(static_cast<int>(newPixelValue),0),255);
+            *(in+i*w+j) = ans; 
+        }
+    }
 }
